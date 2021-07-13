@@ -7,13 +7,10 @@ using System.Diagnostics;
 
 namespace Nintenlord.UPSpatcher
 {
-    public unsafe class UPSfile
+    public class UPSfile
     {
-        bool validPatch;
-        public bool ValidPatch
-        {
-            get { return validPatch; }
-        }
+        public bool ValidPatch { get; private set; }
+
         uint originalFileCRC32;
         uint newFileCRC32;
         uint patchCRC32;
@@ -27,7 +24,7 @@ namespace Nintenlord.UPSpatcher
             List<ulong> changedOffsetsList = new List<ulong>();
             List<byte[]> XORbytesList = new List<byte[]>();
 
-            validPatch = false;
+            ValidPatch = false;
             if (!File.Exists(filePath))
                 return;
             byte[] UPSfile;
@@ -46,55 +43,58 @@ namespace Nintenlord.UPSpatcher
                 return;
             }
 
-            fixed (byte* UPS_ptr = &UPSfile[0])
+            unsafe 
             {
-                //header
-                byte* currentPtr = UPS_ptr;
-                string header = new string((sbyte*)currentPtr,0,4,Encoding.ASCII);
-                if (header != "UPS1")
-                    return;
-                currentPtr += 4;
-                oldFileSize = Decrypt(&currentPtr);
-                newFileSize = Decrypt(&currentPtr);
-
-                //body
-                ulong filePosition = 0;
-                while (currentPtr - UPS_ptr + 1 < UPSfile.Length - 12)
+                fixed (byte* UPS_ptr = &UPSfile[0])
                 {
-                    filePosition += Decrypt(&currentPtr);
-                    changedOffsetsList.Add(filePosition);
-                    List<byte> newXORdata = new List<byte>();
+                    //header
+                    byte* currentPtr = UPS_ptr;
+                    string header = new string((sbyte*)currentPtr,0,4,Encoding.ASCII);
+                    if (header != "UPS1")
+                        return;
+                    currentPtr += 4;
+                    oldFileSize = Decrypt(&currentPtr);
+                    newFileSize = Decrypt(&currentPtr);
 
-                    while (*currentPtr != 0)
+                    //body
+                    ulong filePosition = 0;
+                    while (currentPtr - UPS_ptr + 1 < UPSfile.Length - 12)
                     {
-                        newXORdata.Add(*(currentPtr++));
-                    }
-                    XORbytesList.Add(newXORdata.ToArray());
-                    filePosition += (ulong)newXORdata.Count + 1;
-                    currentPtr++;
-                }
+                        filePosition += Decrypt(&currentPtr);
+                        changedOffsetsList.Add(filePosition);
+                        List<byte> newXORdata = new List<byte>();
 
-                //end
-                originalFileCRC32 = *((uint*)(currentPtr));
-                newFileCRC32 = *((uint*)(currentPtr + 4));
-                patchCRC32 = *((uint*)(currentPtr + 8));                            
+                        while (*currentPtr != 0)
+                        {
+                            newXORdata.Add(*(currentPtr++));
+                        }
+                        XORbytesList.Add(newXORdata.ToArray());
+                        filePosition += (ulong)newXORdata.Count + 1;
+                        currentPtr++;
+                    }
+
+                    //end
+                    originalFileCRC32 = *((uint*)(currentPtr));
+                    newFileCRC32 = *((uint*)(currentPtr + 4));
+                    patchCRC32 = *((uint*)(currentPtr + 8));                            
+                }
             }
 
 
             changedOffsets = changedOffsetsList.ToArray();
             XORbytes = XORbytesList.ToArray();
 
-            if (patchCRC32 != calculatePatchCRC32())
+            if (patchCRC32 != CRC32.crc32_calculate(ToBinary()))
                 return;
 
-            validPatch = true;
+            ValidPatch = true;
         }
 
         public UPSfile(byte[] originalFile, byte[] newFile)
         {
             List<ulong> changedOffsetsList = new List<ulong>();
             List<byte[]> XORbytesList = new List<byte[]>();
-            validPatch = true;
+            ValidPatch = true;
             oldFileSize = (ulong)originalFile.Length;
             newFileSize = (ulong)newFile.Length;
 
@@ -127,7 +127,7 @@ namespace Nintenlord.UPSpatcher
             newFileCRC32 = CRC32.crc32_calculate(newFile);
             changedOffsets = changedOffsetsList.ToArray();
             XORbytes = XORbytesList.ToArray();
-            patchCRC32 = calculatePatchCRC32();
+            patchCRC32 = CRC32.crc32_calculate(ToBinary());
         }
         
         static byte[] Encrypt(ulong offset)
@@ -147,7 +147,7 @@ namespace Nintenlord.UPSpatcher
             return bytes.ToArray();
         }
         
-        static ulong Decrypt(byte** pointer)
+        unsafe static ulong Decrypt(byte** pointer)
         {
             ulong value = 0;
             int shift = 1;
@@ -163,21 +163,16 @@ namespace Nintenlord.UPSpatcher
             return value;
         }
 
-        private uint calculatePatchCRC32()
-        {
-            return CRC32.crc32_calculate(ToBinary());
-        }
-        
         public bool ValidToApply(byte[] file)
         {
             uint fileCRC32 = CRC32.crc32_calculate(file);
             bool fitsAsOld = oldFileSize == (ulong)file.Length && fileCRC32 == originalFileCRC32;
             bool fitsAsNew = newFileSize == (ulong)file.Length && fileCRC32 == newFileCRC32;
 
-            return validPatch && (fitsAsOld || fitsAsNew);
+            return ValidPatch && (fitsAsOld || fitsAsNew);
         }
 
-        public byte[] Apply(byte[] file)
+        public unsafe byte[] Apply(byte[] file)
         {
             ulong length = (ulong)file.LongLength;
             if (length < newFileSize)
@@ -202,7 +197,7 @@ namespace Nintenlord.UPSpatcher
 
         public byte[] Apply(string path)
         {
-            if (!validPatch || !File.Exists(path))
+            if (!ValidPatch || !File.Exists(path))
                 return null;
 
             BinaryReader br = new BinaryReader(File.Open(path, FileMode.Open));
@@ -258,5 +253,4 @@ namespace Nintenlord.UPSpatcher
             return result;
         }
     }
-    
 }

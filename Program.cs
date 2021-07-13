@@ -26,7 +26,12 @@ namespace Nintenlord.UPSpatcher
                     .Where(f => f.ToLowerInvariant().EndsWith(".ups"))
                     .ToList();
                 
-                if (upsFiles.Count != 1)
+                if (upsFiles.Count == 0)
+                {
+                    Console.Error.WriteLine("Error: no .ups file detected");
+                    Environment.Exit(1);
+                }
+                if (upsFiles.Count > 1)
                 {
                     Console.Error.WriteLine("Error: more than 1 .ups file detected");
                     Environment.Exit(1);

@@ -10,19 +10,13 @@ rm -rf obj
 
 for target in ${targets[@]}; do
   echo "building $target"
-  file_name="nups_patcher_${target}_$version"
+  file_name="nups_patcher_${target}_$version.zip"
   dotnet publish -r $target
-  pushd bin/Release/netcoreapp3.1/$target/publish
-  mv nups_patcher $file_name
-  popd
-  zip -j publish/$file_name.zip bin/Release/netcoreapp3.1/$target/publish/$file_name
+  zip -j publish/$file_name bin/Release/netcoreapp3.1/$target/publish/nups_patcher
 done
 
 target="win-x64"
 echo "building $target"
-file_name="nups_patcher_${target}_$version.exe"
+file_name="nups_patcher_${target}_$version.zip"
 dotnet publish -r $target
-pushd bin/Release/netcoreapp3.1/$target/publish
-mv nups_patcher.exe $file_name
-popd
-zip -j publish/nups_patcher_${target}_$version.zip bin/Release/netcoreapp3.1/$target/publish/$file_name
+zip -j publish/$file_name bin/Release/netcoreapp3.1/$target/publish/nups_patcher.exe

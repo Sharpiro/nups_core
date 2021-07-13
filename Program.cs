@@ -41,7 +41,7 @@ namespace Nintenlord.UPSpatcher
                 rom_path = $"{Path.GetFileNameWithoutExtension(patch_path)}.gba";
             }
 
-            var patched_rom_path = $"{Path.GetFileNameWithoutExtension(rom_path)}_patched.gba";
+            var patched_rom_path = $"{Path.GetFileNameWithoutExtension(patch_path)}_patched.gba";
 
             Console.WriteLine($"patch: {patch_path}");
             Console.WriteLine($"source rom: {rom_path}");

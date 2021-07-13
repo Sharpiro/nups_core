@@ -4,142 +4,100 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Text;
-using System.Windows.Forms;
 using System.IO;
 
 namespace Nintenlord.UPSpatcher
 {
-    public partial class Form1 : Form
+    public partial class PatchApplier
     {
+        public PromptStyle prompt_style = PromptStyle.Notify;
 
-        public Form1()
+
+        // select rom
+        private void button3_Click()
         {
-            InitializeComponent();
-            this.Resize += new EventHandler(Form1_Resize);
-            this.MinimumSize = new Size(this.Width - this.textBox1.Width, this.Height);
         }
 
-        void Form1_Resize(object sender, EventArgs e)
+        // select .ups patch
+        private void button5_Click()
         {
-            textBox1.Size = this.Size - this.MinimumSize;
-            textBox3.Size = this.Size - this.MinimumSize;
         }
 
-        private void button3_Click(object sender, EventArgs e)
+        // patch file
+        public void button2_Click(string rom_path, string patch_path, string patched_rom_path)
         {
-            OpenFileDialog open = new OpenFileDialog();
-            open.Title = "Select a file.";
-            open.Filter = "All files|*";
-            open.Multiselect = false;
-            open.ShowDialog();
-            if (open.FileNames.Length > 0)
-            {
-                textBox1.Text = open.FileName;
-            }
-        }
-
-        private void button5_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog open = new OpenFileDialog();
-            open.Title = "Select a patch";
-            open.Filter = "UPS files|*.ups";
-            open.Multiselect = false;
-            open.ShowDialog();
-            if (open.FileNames.Length > 0)
-            {
-                textBox3.Text = open.FileName;
-            }
-        }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            UPSfile upsFile = new UPSfile(textBox3.Text);
+            UPSfile upsFile = new UPSfile(patch_path);
             byte[] file = null;
 
             try
             {
-                BinaryReader br = new BinaryReader(File.Open(textBox1.Text, FileMode.OpenOrCreate));
+                BinaryReader br = new BinaryReader(File.Open(rom_path, FileMode.OpenOrCreate));
                 file = br.ReadBytes((int)br.BaseStream.Length);
                 br.Close();
             }
             catch (Exception)
             {
-                MessageBox.Show("Error opening file\n" + textBox1.Text);
-                return;
+                throw new Exception("Error opening file\n" + rom_path);
             }
 
             if (!upsFile.ValidPatch)
             {
-                MessageBox.Show("The patch is corrupt.");
-                return;
+                throw new Exception("The patch is corrupt.");
             }
 
             bool validToApply = upsFile.ValidToApply(file);
 
-            if (radioButton1.Checked)
+            if (prompt_style == PromptStyle.Abort)
             {
                 if (!validToApply)
                 {
-                    MessageBox.Show("The patch doesn't match the file.\nPatching canceled.");
-                    return;
+                    throw new Exception("The patch doesn't match the file.\nPatching canceled.");
                 }
             }
-            else if (radioButton2.Checked)
+            else if (prompt_style == PromptStyle.Ask)
             {
                 if (!validToApply)
                 {
-                    if (MessageBox.Show("The patch doesn't match the file.\nPatch anyway?", "Patch?", MessageBoxButtons.OKCancel) == DialogResult.Cancel)
-                        return;
+                    throw new Exception("The patch doesn't match the file.\nPatching canceled.");
                 }
             }
-            else if (radioButton3.Checked)
+            else if (prompt_style == PromptStyle.Notify)
             {
                 if (!validToApply)
-                    MessageBox.Show("The patch doesn't match the file.\nPatching anyway.");
+                {
+                    Console.WriteLine("The patch doesn't match the file.\nPatching anyway.");
+                }
             }
-            else if (!radioButton4.Checked)
+            else if (prompt_style != PromptStyle.Ignore)
             {
                 throw new Exception("What do you want me to do!?!?!?");
             }                
-
-            if (checkBox1.Checked)
-            {
-                string filePath = Path.ChangeExtension(textBox1.Text, ".bak");
-                if (File.Exists(filePath))
-                {
-                    string fileName = Path.GetFileNameWithoutExtension(textBox1.Text);
-                    int i = 1;
-                    while (File.Exists(Path.GetDirectoryName(textBox1.Text) + fileName + i + ".bak"))
-                    {
-                        i++;
-                    }
-                    filePath = Path.GetDirectoryName(textBox1.Text) + fileName + i + ".bak";
-                }
-
-                File.Copy(textBox1.Text, filePath, false);
-            }
 
             byte[] newFile = upsFile.Apply(file);
 
             try
             {
-                BinaryWriter bw = new BinaryWriter(File.Open(textBox1.Text, FileMode.Truncate));
-                bw.Write(newFile);
-                bw.Close();
+                File.WriteAllBytes(patched_rom_path, newFile);
             }
             catch (Exception)
             {
-                MessageBox.Show("Error opening file\n" + textBox1.Text);
-                return;
+                throw new Exception("Error writing patch");
             }
 
-            MessageBox.Show("Patching has been done.");
-            this.Close();
+            Console.WriteLine("Patching has been done.");
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        // close window
+        private void button1_Click()
         {
-            this.Close();
         }
+    }
+
+    public enum PromptStyle
+    {
+        Abort,
+        Ask,
+        Notify,
+        Ignore
     }
 }

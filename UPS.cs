@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace Nintenlord.UPSpatcher
 {
@@ -32,7 +33,11 @@ namespace Nintenlord.UPSpatcher
             byte[] UPSfile;
             try
             {
-                BinaryReader br = new BinaryReader(File.Open(filePath, FileMode.Open));
+                var patchFile = File.Open(filePath, FileMode.Open);
+                if (patchFile.Length == 0) return;
+
+                BinaryReader br = new BinaryReader(patchFile);
+                Debug.Assert(patchFile.Length== br.BaseStream.Length);
                 UPSfile = br.ReadBytes((int)br.BaseStream.Length);
                 br.Close();
             }
@@ -41,10 +46,10 @@ namespace Nintenlord.UPSpatcher
                 return;
             }
 
-            fixed (byte* UPSptr = &UPSfile[0])
+            fixed (byte* UPS_ptr = &UPSfile[0])
             {
                 //header
-                byte* currentPtr = UPSptr;
+                byte* currentPtr = UPS_ptr;
                 string header = new string((sbyte*)currentPtr,0,4,Encoding.ASCII);
                 if (header != "UPS1")
                     return;
@@ -54,7 +59,7 @@ namespace Nintenlord.UPSpatcher
 
                 //body
                 ulong filePosition = 0;
-                while (currentPtr - UPSptr + 1 < UPSfile.Length - 12)
+                while (currentPtr - UPS_ptr + 1 < UPSfile.Length - 12)
                 {
                     filePosition += Decrypt(&currentPtr);
                     changedOffsetsList.Add(filePosition);
@@ -174,11 +179,11 @@ namespace Nintenlord.UPSpatcher
 
         public byte[] Apply(byte[] file)
         {
-            ulong lenght = (ulong)file.LongLength;
-            if (lenght < newFileSize)
-                lenght = newFileSize;
+            ulong length = (ulong)file.LongLength;
+            if (length < newFileSize)
+                length = newFileSize;
 
-            byte[] result = new byte[lenght];
+            byte[] result = new byte[length];
 
             fixed (byte* resultPtr = &result[0])
             {

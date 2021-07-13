@@ -4,27 +4,12 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Text;
-using System.Windows.Forms;
 using System.IO;
 
 namespace Nintenlord.UPSpatcher
 {
-    public partial class Form2 : Form
+    public partial class PatchCreator
     {
-        public Form2()
-        {
-            InitializeComponent();
-            this.Resize += new EventHandler(Form2_Resize);
-            this.MinimumSize = new Size(this.Width - this.textBox1.Width, this.Height);
-        }
-
-        void Form2_Resize(object sender, EventArgs e)
-        {
-            textBox1.Size = this.Size - this.MinimumSize;
-            textBox2.Size = this.Size - this.MinimumSize;
-            textBox3.Size = this.Size - this.MinimumSize;
-        }
-
         private void button3_Click(object sender, EventArgs e)
         {
             OpenFileDialog open = new OpenFileDialog();

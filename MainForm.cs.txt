@@ -4,41 +4,32 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Text;
-using System.Windows.Forms;
 
 namespace Nintenlord.UPSpatcher
 {
-    public partial class MainForm : Form
+    public class MainForm
     {
-        public MainForm()
-        {
-            InitializeComponent();
-        }
-
+        // form 1
         private void button1_Click(object sender, EventArgs e)
         {
-            Form form = new Form1();
-            form.ShowInTaskbar = false;
-            form.ShowDialog();
+            var form = new PatchApplier();
         }
 
+        // form 2
         private void button2_Click(object sender, EventArgs e)
         {
-            Form form = new Form2();
-            form.ShowInTaskbar = false;
-            form.ShowDialog();
+            var form = new PatchCreator();
         }
 
+        // close button
         private void button3_Click(object sender, EventArgs e)
         {
-            this.Close();
         }
 
+        // form 3
         private void button4_Click(object sender, EventArgs e)
         {
-            Form form = new Form3();
-            form.ShowInTaskbar = false;
-            form.ShowDialog();
+            var form = new PatchReader();
         }
     }
 }
